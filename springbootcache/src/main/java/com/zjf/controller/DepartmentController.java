@@ -1,0 +1,24 @@
+package com.zjf.controller;
+
+import com.zjf.bean.Employee;
+import com.zjf.service.EmployeeService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * Created by Kevin Zhu on 2019/2/1 23:55 .
+ */
+@RestController
+public class DepartmentController {
+
+    @Autowired
+    private EmployeeService employeeService;
+
+    @GetMapping("/emp/{id}")
+    public Employee getEmpById(@PathVariable Integer id) {
+        return employeeService.getEmpById(id);
+    }
+
+}
