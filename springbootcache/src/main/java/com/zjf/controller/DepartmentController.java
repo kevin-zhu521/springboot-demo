@@ -21,4 +21,16 @@ public class DepartmentController {
         return employeeService.getEmpById(id);
     }
 
+    @GetMapping("/emp/update")
+    public void updateEmp() {
+        Employee employee = employeeService.getEmpById(1);
+        employee.setLastName("kevin");
+        employeeService.updateEmp(employee);
+    }
+
+    @GetMapping("/emp/delete")
+    public void deleteEmp() {
+        employeeService.deleteEmp(1);
+    }
+
 }
