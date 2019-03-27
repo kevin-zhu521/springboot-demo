@@ -2,6 +2,7 @@ package com.zjf.controller;
 
 import com.zjf.bean.Employee;
 import com.zjf.service.EmployeeService;
+import net.sf.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,6 +32,14 @@ public class DepartmentController {
     @GetMapping("/emp/delete")
     public void deleteEmp() {
         employeeService.deleteEmp(1);
+    }
+
+    @GetMapping("/json/test")
+    public Object jsonTest() {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("a","1");
+        jsonObject.put("b","null");
+        return jsonObject;
     }
 
 }
