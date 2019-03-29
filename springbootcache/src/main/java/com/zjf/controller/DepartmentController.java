@@ -38,7 +38,7 @@ public class DepartmentController {
     public Object jsonTest() {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("a","1");
-        jsonObject.put("b","null");
+        jsonObject.put("b","2");
         return jsonObject;
     }
 
