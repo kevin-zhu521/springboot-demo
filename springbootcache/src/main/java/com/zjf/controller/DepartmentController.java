@@ -1,5 +1,6 @@
 package com.zjf.controller;
 
+import com.zjf.aspect.log.MethodLog;
 import com.zjf.bean.Employee;
 import com.zjf.service.EmployeeService;
 import net.sf.json.JSONObject;
@@ -18,6 +19,7 @@ public class DepartmentController {
     private EmployeeService employeeService;
 
     @GetMapping("/emp/{id}")
+    @MethodLog("第一次测试日志记录")
     public Employee getEmpById(@PathVariable Integer id) {
         return employeeService.getEmpById(id);
     }

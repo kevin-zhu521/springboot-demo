@@ -36,14 +36,14 @@ public class EmployeeServiceImpl implements EmployeeService {
     private RedisTemplate<String,String> redisTemplate;
 
     @Override
-    @Cacheable(key = "'emp_' + #id")
+//    @Cacheable(key = "'emp_' + #id")
     public Employee getEmpById(Integer id) {
         log.info("查询出员工:" + id);
         return employeeMapper.getEmpById(id);
     }
 
     @Override
-    @CachePut(key = "'emp_' + #employee.id")
+//    @CachePut(key = "'emp_' + #employee.id")
     public Employee updateEmp(Employee employee) {
         log.info("更新员工:" + employee.getId());
         employeeMapper.updateEmp(employee);
@@ -56,7 +56,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
-    @CacheEvict(key = "'emp_' + #id")
+//    @CacheEvict(key = "'emp_' + #id")
     public void deleteEmp(Integer id) {
 //        employeeMapper.deleteEmp(id);
         log.info("删除员工:" + id);
