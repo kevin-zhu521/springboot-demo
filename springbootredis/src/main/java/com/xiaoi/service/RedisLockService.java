@@ -8,6 +8,6 @@ import java.util.List;
  */
 public interface RedisLockService {
 
-    public void lockByScript(List<String> keys, Object... argv);
+    public boolean lockByScript(List<String> keys, Object... argv);
 
 }

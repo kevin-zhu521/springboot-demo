@@ -3,6 +3,8 @@ package com.xiaoi.service.impl;
 import com.xiaoi.service.RedisLockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.ReturnType;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -42,94 +44,8 @@ public class RedisLockServiceImpl implements RedisLockService {
      */
     public static final int EXPIRE = 3 * 60;
 
-    private String key;
 
     private boolean locked = false;
-
-    @Autowired
-    private StringRedisTemplate redisTemplate;
-
-    public boolean lock(long timeout) {
-        long nano = System.nanoTime();
-        timeout *= MILLI_NANO_CONVERSION;
-        if (addLock(timeout, nano, EXPIRE)) {
-            this.locked = true;
-            return locked;
-        }
-        return locked;
-    }
-
-    public boolean lock(long timeout, int expire) {
-        long nano = System.nanoTime();
-        timeout *= MILLI_NANO_CONVERSION;
-        if (addLock(timeout, nano, expire)) {
-            this.locked = true;
-            return locked;
-
-        }
-        return locked;
-    }
-
-    /**
-     * 默认加锁
-     *
-     * @return
-     */
-    public boolean lock() {
-        return lock(DEFAULT_TIME_OUT);
-    }
-
-    /**
-     * @param timeout 加锁超时时间
-     * @param nano
-     * @param expire  锁的超时时间(秒),过期删除
-     * @return 成功或失败标志
-     */
-    private boolean addLock(long timeout, long nano, int expire) {
-        try {
-            while ((System.nanoTime() - nano) < timeout) {
-                if (this.redisTemplate.opsForValue().setIfAbsent(this.key, LOCKED)) {
-                    this.redisTemplate.expire(this.key, expire, TimeUnit.SECONDS);
-                    return true;
-                }
-                // 短暂休眠，避免出现活锁
-                Thread.sleep(3, RANDOM.nextInt(500));
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Locking error", e);
-        }
-        return false;
-    }
-
-    /**
-     * 解锁
-     */
-    public void unlock() {
-        try {
-            if (this.locked) {
-                this.redisTemplate.delete(this.key);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Unlock error", e);
-        }
-    }
-
-    /**
-     * lua脚本加锁
-     */
-    public void lockByScript(List<String> keys, Object... argv) {
-        try {
-            DefaultRedisScript redisScript =new DefaultRedisScript<>();
-            redisScript.setLocation(new ClassPathResource("lua/lock.lua"));
-            // 这个值类型要跟lua返回值类型一致才行，否则就会报 java.lang.IllegalStateException
-            redisScript.setResultType(Integer.class);
-            int result = (int)redisTemplate.execute(redisScript, keys, argv);
-            System.out.println("");
-        } catch (Exception e) {
-            throw new RuntimeException("lock error", e);
-        }
-
-    }
 
     /**
      * 分布式加锁实现
@@ -146,8 +62,126 @@ public class RedisLockServiceImpl implements RedisLockService {
             + " return redis.call('del', KEYS[1])"
             + " else return 0 end";
 
+    /**
+     * 分布式自减（不会存在减成负数情况）
+     */
     public String DECREMENT_SCRIPT = "if tonumber(redis.call('get',KEYS[1])) > 0 then "
             + " redis.call('decr',KEYS[1]) "
             + " return 1"
             + " else return 0 end";
+
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    public boolean lock(long timeout, String key) {
+        long nano = System.nanoTime();
+        timeout *= MILLI_NANO_CONVERSION;
+        if (addLock(timeout, nano, EXPIRE, key)) {
+            this.locked = true;
+            return locked;
+        }
+        return locked;
+    }
+
+    public boolean lock(long timeout, int expire, String key) {
+        long nano = System.nanoTime();
+        timeout *= MILLI_NANO_CONVERSION;
+        if (addLock(timeout, nano, expire, key)) {
+            this.locked = true;
+            return locked;
+
+        }
+        return locked;
+    }
+
+    /**
+     * 默认加锁
+     *
+     * @return
+     */
+    public boolean lock(String key) {
+        return lock(DEFAULT_TIME_OUT, key);
+    }
+
+    /**
+     * @param timeout 加锁超时时间
+     * @param nano
+     * @param expire  锁的超时时间(秒),过期删除
+     * @return 成功或失败标志
+     */
+    private boolean addLock(long timeout, long nano, int expire, String key) {
+        try {
+            while ((System.nanoTime() - nano) < timeout) {
+                if (this.redisTemplate.opsForValue().setIfAbsent(key, LOCKED)) {
+                    this.redisTemplate.expire(key, expire, TimeUnit.SECONDS);
+                    return true;
+                }
+                // 短暂休眠，避免出现活锁
+                Thread.sleep(3, RANDOM.nextInt(500));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Locking error", e);
+        }
+        return false;
+    }
+
+    /**
+     * 解锁
+     */
+    public void unlock(String key) {
+        try {
+            if (this.locked) {
+                this.redisTemplate.delete(key);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Unlock error", e);
+        }
+    }
+
+    /**
+     * lua脚本加锁
+     */
+    public boolean lockByScript(List<String> keys, Object... argv) {
+        try {
+            DefaultRedisScript redisScript = new DefaultRedisScript<>();
+            redisScript.setResultType(Long.class);//不支持int
+            redisScript.setScriptText(LOCK_SCRIPT);
+            long result = (long) redisTemplate.execute(redisScript, keys, argv);
+            return result == 1 ? true : false;
+        } catch (Exception e) {
+            throw new RuntimeException("lock error", e);
+        }
+    }
+
+    /**
+     * lua脚本解锁
+     */
+    public boolean unlockByScript(List<String> keys, Object... argv) {
+        try {
+            DefaultRedisScript redisScript = new DefaultRedisScript<>();
+            redisScript.setResultType(Long.class);//不支持int
+            redisScript.setScriptText(UN_LOCK_SCRIPT);
+            long result = (long) redisTemplate.execute(redisScript, keys, argv);
+            return result == 1 ? true : false;
+        } catch (Exception e) {
+            throw new RuntimeException("lock error", e);
+        }
+    }
+
+    /**
+     * lua脚本（用户秒杀商品活动）
+     */
+    public boolean decrByScript(List<String> keys, Object... argv) {
+        try {
+            DefaultRedisScript redisScript = new DefaultRedisScript<>();
+            redisScript.setResultType(Long.class);//不支持int
+            redisScript.setScriptText(DECREMENT_SCRIPT);
+            long result = (long) redisTemplate.execute(redisScript, keys, argv);
+            return result == 1 ? true : false;
+        } catch (Exception e) {
+            throw new RuntimeException("lock error", e);
+        }
+    }
+
 }

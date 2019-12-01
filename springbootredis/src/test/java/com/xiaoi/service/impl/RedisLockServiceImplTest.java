@@ -23,7 +23,8 @@ class RedisLockServiceImplTest extends SpringbootredisApplicationTests {
 
     @Test
     void lockByScript() {
-        List<String> keys = Arrays.asList("xiaoi:key");
-        redisLockService.lockByScript(keys, "valueeee", "10");
+        List<String> keys = Arrays.asList("xiaoi:key");//key
+        boolean result = redisLockService.lockByScript(keys, "valueeee", "100");//value,过期时间，默认秒
+        System.out.println(result);
     }
 }
