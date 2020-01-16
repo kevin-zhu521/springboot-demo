@@ -15,14 +15,14 @@ import sun.rmi.runtime.Log;
 public class AsyncServiceImpl implements AsyncService {
 
     @Override
-    @Async
+    @Async("asyncServiceExecutor")
     public void asyncTask() {
         try {
-            log.info("睡眠开始");
+            log.info(Thread.currentThread().getName() + "睡眠开始");
             Thread.sleep(3000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        System.out.println("睡眠之后");
+        log.info(Thread.currentThread().getName() + "睡眠之后");
     }
 }

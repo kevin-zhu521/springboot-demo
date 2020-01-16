@@ -17,7 +17,9 @@ public class AsyncController {
 
     @GetMapping("async")
     public String asyncTask(){
-        asyncService.asyncTask();
+        for (int i = 0; i < 10; i++) {
+            asyncService.asyncTask();
+        }
         return "success";
     }
 
